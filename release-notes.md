@@ -33,7 +33,9 @@
   and a configuration without target generators is rejected with a clear error. The CLI runner now also writes the
   `--log` file to disk.
 - Fixed Bug #121: the TypeScript, C++ and C# generators failed with "Maximum call stack size exceeded" for very large
-  parsers (more than about 125k lines). `GeneratorBase` now has an `append()` helper for appending large line lists.
+  parsers (more than about 125k lines), and the ATN optimizer had the same problem for very large ATNs. `GeneratorBase`
+  now has a protected `append()` helper for appending large line lists. A custom generator which declares its own
+  private `append` member has to rename or remove it.
 
 ## 1.0.10
 

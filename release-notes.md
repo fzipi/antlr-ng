@@ -32,6 +32,8 @@
 - Errors during code generation are now reported as internal errors instead of making the tool fail without a message,
   and a configuration without target generators is rejected with a clear error. The CLI runner now also writes the
   `--log` file to disk.
+- Fixed Bug #121: the TypeScript, C++ and C# generators failed with "Maximum call stack size exceeded" for very large
+  parsers (more than about 125k lines). `GeneratorBase` now has an `append()` helper for appending large line lists.
 
 ## 1.0.10
 

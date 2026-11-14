@@ -56,7 +56,9 @@
 - Fixed the `interpreter` CLI, which failed for every grammar with "The ATN must be created before creating a lexer
   interpreter", because it configured no target generator and the tool only builds the ATN per generator. Its
   `--profile` option now takes the name of the CSV file. Before, profiling was always on and wrote `filename.csv`, and
-  `--profile x.csv` treated `x.csv` as a grammar file. The profile's time column is now in milliseconds, as labeled.
+  `--profile x.csv` treated `x.csv` as a grammar file. The profile's time column is now in milliseconds, as labeled. Errors in the grammars, an unknown
+  start rule and grammars in the wrong order or number are reported and end the run with exit code 1. Before, they
+  crashed or exited with 0.
 
 ## 1.0.10
 

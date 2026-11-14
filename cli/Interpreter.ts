@@ -15,6 +15,7 @@ import { CharStream, CommonToken, CommonTokenStream, DecisionInfo, ParseInfo } f
 import { defineConfig } from "../src/config/config.js";
 import { TypeScriptTargetGenerator } from "../src/default-target-generators/TypeScriptTargetGenerator.js";
 import { copyFolderToMemFs } from "../src/support/fs-helpers.js";
+import { GrammarType } from "../src/support/GrammarType.js";
 import { useFileSystem } from "../src/tool-parameters.js";
 import { Tool } from "../src/Tool.js";
 import type { GrammarParserInterpreter } from "../src/tool/GrammarParserInterpreter.js";
@@ -44,7 +45,7 @@ program
         .choices(encodings).default("utf-8"))
     .option("--profile <filename>", "Profile the parser and write the profiling information to this CSV file.")
     .argument("<input-filename>", "Input file")
-    .argument("[grammar...]", "Lexer/Parser/Combined grammar files")
+    .argument("[grammar...]", "A combined grammar, or a parser grammar followed by its lexer grammar")
     .parse();
 
 const interpreterOptions = program.opts<IInterpreterCliParameters>();
@@ -101,7 +102,11 @@ export class Interpreter {
     }
 
     public async run(): Promise<ParseInfo | undefined> {
-        if (interpreterOptions.grammars.length === 0 || !interpreterOptions.inputFile) {
+        if (!interpreterOptions.inputFile || interpreterOptions.grammars.length === 0
+            || interpreterOptions.grammars.length > 2) {
+            Interpreter.fail("Expected an input file, followed by a combined grammar, or by a parser grammar " +
+                "and its lexer grammar.");
+
             return undefined;
         }
 
@@ -131,22 +136,58 @@ export class Interpreter {
             generators: [new TypeScriptTargetGenerator()],
         });
 
+        // The listener formats the messages with this error manager.
+        tool.errorManager.configure(parameters.messageFormatOptions);
+
         if (interpreterOptions.grammars.length === 1) {
             // Must be a combined grammar.
             const grammarContent = await fs.promises.readFile(interpreterOptions.grammars[0], "utf8") as string;
             g = Grammar.forFile(IgnoreTokenVocabGrammar, interpreterOptions.grammars[0], grammarContent, undefined,
                 listener);
+            if (!g.isCombined()) {
+                Interpreter.fail(`${interpreterOptions.grammars[0]} is not a combined grammar. Pass a parser grammar ` +
+                    "followed by its lexer grammar instead.");
+
+                return undefined;
+            }
+
             g.tool.process(g, parameters, false);
         } else {
             const lexerGrammarContent = await fs.promises.readFile(interpreterOptions.grammars[1], "utf8") as string;
             lg = new LexerGrammar(lexerGrammarContent);
+            if (lg.ast.grammarType !== GrammarType.Lexer) {
+                Interpreter.fail(`${interpreterOptions.grammars[1]} is not a lexer grammar. Pass the parser grammar ` +
+                    "first and the lexer grammar second.");
+
+                return undefined;
+            }
+
             lg.tool.errorManager.addListener(listener);
             lg.tool.process(lg, parameters, false);
+            if (lg.tool.getNumErrors() > 0) {
+                Interpreter.fail();
+
+                return undefined;
+            }
 
             const parserGrammarContent = await fs.promises.readFile(interpreterOptions.grammars[0], "utf8") as string;
             g = Grammar.forFile(IgnoreTokenVocabGrammar, interpreterOptions.grammars[0], parserGrammarContent, lg,
                 listener);
+            if (!g.isParser()) {
+                Interpreter.fail(`${interpreterOptions.grammars[0]} is not a parser grammar. Pass the parser grammar ` +
+                    "first and the lexer grammar second.");
+
+                return undefined;
+            }
+
             g.tool.process(g, parameters, false);
+        }
+
+        // The tool has reported the errors already. Without a valid grammar there is no ATN to interpret.
+        if (g.tool.getNumErrors() > 0) {
+            Interpreter.fail();
+
+            return undefined;
         }
 
         const input = await nodeFs.promises.readFile(interpreterOptions.inputFile, interpreterOptions.encoding);
@@ -175,7 +216,7 @@ export class Interpreter {
 
         const r = g.rules.get(interpreterOptions.startRuleName);
         if (!r) {
-            console.error("No such start rule: " + interpreterOptions.startRuleName);
+            Interpreter.fail("No such start rule: " + interpreterOptions.startRuleName);
 
             return undefined;
         }
@@ -192,6 +233,19 @@ export class Interpreter {
         }
 
         return parseInfo ?? undefined;
+    }
+
+    /**
+     * Ends the run with a non-zero exit code.
+     *
+     * @param message An error message to print, if the error was not reported already.
+     */
+    private static fail(message?: string): void {
+        if (message) {
+            console.error(message);
+        }
+
+        process.exitCode = 1;
     }
 
     private dumpProfilerCSV(parser: GrammarParserInterpreter, parseInfo: ParseInfo): void {

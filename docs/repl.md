@@ -100,7 +100,7 @@ Usage: interpreter [options] <startRuleName> <input-filename> [grammar...]
 Arguments:
   startRuleName           Name of the parser start rule
   input-filename          Input file
-  grammar                 Lexer/Parser/Combined grammar files
+  grammar                 A combined grammar, or a parser grammar followed by its lexer grammar
 
 Options:
   --tree                  Print out the parse tree (default: false)

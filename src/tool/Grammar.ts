@@ -1148,7 +1148,7 @@ export class Grammar implements IGrammar, IAttributeResolver {
     public createLexerInterpreter(input: CharStream): LexerInterpreter {
         if (!this.atn) {
             throw new Error("The ATN must be created before creating a lexer interpreter. " +
-                "Have you called `Grammar.tool.process()`?");
+                "Have you called `Grammar.tool.process()` with at least one target generator, and without errors?");
         }
 
         if (this.isParser()) {
@@ -1174,8 +1174,8 @@ export class Grammar implements IGrammar, IAttributeResolver {
 
     public createGrammarParserInterpreter(tokenStream: TokenStream): GrammarParserInterpreter {
         if (!this.atn) {
-            throw new Error("The ATN must be created before creating a lexer interpreter. " +
-                "Have you called `Grammar.tool.process()`?");
+            throw new Error("The ATN must be created before creating a parser interpreter. " +
+                "Have you called `Grammar.tool.process()` with at least one target generator, and without errors?");
         }
 
         if (this.isLexer()) {
@@ -1192,8 +1192,8 @@ export class Grammar implements IGrammar, IAttributeResolver {
     /** For testing. */
     public createParserInterpreter(tokenStream: TokenStream): ParserInterpreter {
         if (!this.atn) {
-            throw new Error("The ATN must be created before creating a lexer interpreter. " +
-                "Have you called `Grammar.tool.process()`?");
+            throw new Error("The ATN must be created before creating a parser interpreter. " +
+                "Have you called `Grammar.tool.process()` with at least one target generator, and without errors?");
         }
 
         if (this.isLexer()) {

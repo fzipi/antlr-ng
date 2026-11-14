@@ -65,6 +65,11 @@
   `generateInterpreterData`. Imported grammars are only listed as dependencies. The dependency line has the make
   format `T.g4: A.tokens`, and spaces in the output directory are escaped. The CLI no longer fails after listing the
   dependencies because of the missing output directory.
+- `ITargetGenerator.getRecognizerFileName` takes an optional third parameter, `isLexer`, because the recognizer name of
+  a lexer or parser grammar has no `Lexer` or `Parser` suffix. The Go generator uses it to name the files like the
+  ANTLR4 Go target. Before, it guessed the kind of a name without suffix from the last rendered file, so
+  `generateDependencies` listed `pl_parser.go` for `lexer grammar PL`, and a lexer grammar named `TokensParser` got
+  the file name `tokens_parser.go`.
 
 ## 1.0.10
 
